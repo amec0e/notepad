@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Notepad</title>
+  <link rel="stylesheet" href="notepad.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TITLE BAR -->
+  <header id="titlebar">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11.5 1.3l3.2 3.2-8 8L3 13l.5-3.7 8-8zm-7 8.9L4.2 12l1.8-.3 6.6-6.6-1.5-1.5-6.6 6.6z"/></svg>
+      </div>
+      Notepad
+    </div>
+    <div class="title-sep"></div>
+    <div class="doc-stats">
+      <div class="stat-pill words"><span class="dot"></span><span id="stat-words">0</span><span class="stat-label">&nbsp;words</span></div>
+      <div class="stat-pill chars"><span class="dot"></span><span id="stat-chars">0</span><span class="stat-label">&nbsp;chars</span></div>
+      <div class="stat-pill lines"><span class="dot"></span><span id="stat-lines">1</span><span class="stat-label">&nbsp;lines</span></div>
+    </div>
+  </header>
+
+  <!-- TOOLBAR -->
+  <div id="toolbar">
+    <button class="tb-btn" onclick="openFile()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h5l1.5 2H15v9H1V3zm1.5 1.5V13h11V6.5H7L5.5 4.5H2.5z"/></svg>
+      Open
+    </button>
+    <button class="tb-btn" id="btn-save" onclick="saveFile()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h9l3 3v9H2V2zm1.5 1.5v3h6v-3h-6zM4 9h8v3.5H4V9z"/></svg>
+      Save
+    </button>
+    <button class="tb-btn" onclick="saveFileAs()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h9l3 3v9H2V2zm1.5 1.5v3h6v-3h-6zM4 9h8v3.5H4V9z"/><path d="M12.5 1v4h1V1z" opacity=".55"/></svg>
+      Save As
+    </button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-find" onclick="toggleFind()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 2a5 5 0 013.9 8.1l3.5 3.5-1 1-3.5-3.5A5 5 0 117 2zm0 1.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7z"/></svg>
+      Text Tools
+    </button>
+    <button class="tb-btn" id="btn-dupes" onclick="toggleDupes()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h8v2H4v6H2V2z"/><path d="M6 6h8v8H6V6zm1.5 1.5v5h5v-5h-5z"/></svg>
+      Duplicates
+    </button>
+    <button class="tb-btn" id="btn-copy" onclick="copyAll()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2h8v1H4zm-2 2h12v11H2V4zm1 1v9h10V5H3z"/></svg>
+      Copy
+    </button>
+    <button class="tb-btn" onclick="clearAll()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12l-1 11H3L2 3zm2 1l.8 9h6.4L12 4H4zm3-3h2v1H7V1z"/></svg>
+      Clear
+    </button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn active" id="btn-wrap" onclick="toggleWrap()">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v1.4H1zm0 4h10.5a2.5 2.5 0 110 5H9v1.6l-3-2.3 3-2.3V11h2.5a1 1 0 100-2H1zm0 4h5v1.4H1z"/></svg>
+      Wrap
+    </button>
+    <div class="tb-sep"></div>
+    <div class="font-toggle">
+      <button class="view-btn" onclick="bumpFont(-1)" title="Smaller text">A−</button>
+      <button class="view-btn" onclick="bumpFont(1)" title="Larger text">A+</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main id="main">
+    <div class="editor-pane" id="pane"
+         ondragover="onDragOver(event)"
+         ondragleave="onDragLeave()"
+         ondrop="onDrop(event)">
+      <div class="pane-header">
+        <span class="pane-label">Editing</span>
+        <span class="pane-filename" id="fname" onclick="renameFile()" title="Tap to rename — sets the name your file downloads as">untitled.txt<svg class="rename-pencil" viewBox="0 0 16 16" fill="currentColor"><path d="M11.5 1.3l3.2 3.2-8 8L3 13l.5-3.7 8-8zm-7 8.9L4.2 12l1.8-.3 6.6-6.6-1.5-1.5-6.6 6.6z"/></svg><span class="dirty-dot" id="dirty"></span></span>
+        <span class="pane-enc">UTF-8</span>
+        <span class="line-count" id="cursor-pos">Ln 1, Col 1</span>
+      </div>
+      <div class="drop-overlay">Drop file to open</div>
+      <div class="load-overlay" id="load-overlay">
+        <div class="load-spinner"></div>
+        <div class="load-text" id="load-text">Loading…</div>
+      </div>
+
+      <!-- TEXT TOOLS: FIND / REPLACE / STRIP / SPLIT -->
+      <div id="find-panel" class="find-panel hidden">
+        <div class="find-row">
+          <input id="find-input" class="find-field" type="text" placeholder="Find  ·  \n = newline" spellcheck="false" autocomplete="off" title="Type \n to match a line break — search \n\n to find empty lines. Also \t (tab), \r, and \\ for a literal backslash. In regex mode these already work natively.">
+          <span id="find-count" class="find-count"></span>
+          <button class="find-icon" onclick="findStep(-1)" title="Previous (Shift+Enter)">▲</button>
+          <button class="find-icon" onclick="findStep(1)" title="Next (Enter)">▼</button>
+          <button id="find-case" class="find-opt" onclick="toggleFindOpt('case')" title="Match case">Aa</button>
+          <button id="find-regex" class="find-opt" onclick="toggleFindOpt('regex')" title="Regular expression">.*</button>
+          <button class="find-icon find-close" onclick="closeFind()" title="Close (Esc)">✕</button>
+        </div>
+        <div class="find-row find-row-area">
+          <textarea id="replace-input" class="find-field find-area" rows="1" placeholder="Replace with — Return adds a new line" spellcheck="false" autocomplete="off"></textarea>
+          <button class="find-act" onclick="replaceOne()">Replace</button>
+          <button class="find-act" onclick="replaceAll()">All</button>
+        </div>
+        <div class="find-row find-row-area find-strip">
+          <span class="strip-label" title="Strip: cut the symbol and everything after it, per line. Remove line: delete the whole line wherever the symbol appears.">Strip lines with</span>
+          <input id="strip-input" class="find-field strip-field" type="text" placeholder="# or //" spellcheck="false" autocomplete="off">
+          <button class="find-act" onclick="stripFrom()" title="On each line, remove the symbol and everything after it (keeps the part before)">Strip</button>
+          <button class="find-act" onclick="stripWholeLines()" title="Delete the entire line whenever the symbol appears anywhere in it">Remove line</button>
+          <button class="find-act" onclick="stripEmptyLines()" title="Remove every blank (empty or whitespace-only) line from the document">Strip empty lines</button>
+        </div>
+        <div class="find-row find-row-area find-split">
+          <span class="strip-label" title="Breaks the text onto a new line at every occurrence of this delimiter">Split lines with</span>
+          <textarea id="split-input" class="find-field split-field find-area" rows="1" placeholder=", or ; — Return = new line" spellcheck="false" autocomplete="off"></textarea>
+          <button class="find-act" onclick="splitLines()">Split</button>
+        </div>
+      </div>
+
+      <!-- CodeMirror mounts here -->
+      <div id="editor-host"></div>
+    </div>
+
+    <!-- DUPLICATE LINES PANEL (docked below editor, toggled by Duplicates btn) -->
+    <div id="dupe-panel" class="dupe-panel">
+      <div class="dupe-header">
+        <span class="dupe-label">DUPLICATES</span>
+        <span class="dupe-hint" id="dupe-hint"></span>
+        <button class="dupe-nav" onclick="dupeStep(-1)" title="Previous duplicate (Shift+F3)">▲</button>
+        <button class="dupe-nav" onclick="dupeStep(1)" title="Next duplicate (F3)">▼</button>
+        <button id="dupe-case" class="dupe-opt" onclick="toggleDupeOpt('case')" title="Match case">Aa</button>
+        <button id="dupe-trim" class="dupe-opt active" onclick="toggleDupeOpt('trim')" title="Ignore leading/trailing whitespace">Trim</button>
+        <button class="dupe-act" onclick="removeAllDupes()" title="Keep first of each, remove the rest">Remove All</button>
+        <button id="dupe-expand" class="dupe-nav" onclick="toggleDupeExpand()" title="Expand panel to full size">⤢</button>
+        <button class="dupe-close" onclick="closeDupes()" title="Close (Esc)">✕</button>
+      </div>
+      <div class="dupe-body" id="dupe-body"></div>
+    </div>
+  </main>
+
+  <!-- STATUS BAR -->
+  <footer id="statusbar">
+    <div class="status-item">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Ready — open a file or start typing</span>
+    </div>
+    <span id="sel-indicator"></span>
+  </footer>
+
+</div><!-- /#app -->
+
+<input type="file" id="file-input" accept="*/*" onchange="loadFromInput(event)">
+
+<!-- CodeMirror 6 from the local bundle (offline; must sit next to this file). -->
+<script src="codemirror.bundle.js"></script>
+<script src="notepad.js"></script>
+</body>
+</html>
