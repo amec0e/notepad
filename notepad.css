@@ -377,12 +377,12 @@ input[type=file] { display: none; }
 .find-count.error { color: var(--del-bar); }
 
 /* Strip / Split rows */
-.find-strip, .find-split {
+.find-strip, .find-split, .find-sort, .find-upper {
   border-top: 1px solid var(--border);
   padding-top: 7px;
   margin-top: 1px;
 }
-.find-strip { flex-wrap: wrap; }   /* let "Strip empty lines" drop below on narrow widths */
+.find-strip, .find-sort, .find-upper { flex-wrap: wrap; }   /* let buttons drop below on narrow widths */
 .strip-label {
   font-size: 10px;
   color: var(--accent-orange);
