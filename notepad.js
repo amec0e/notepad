@@ -59,6 +59,7 @@ const findInput    = document.getElementById('find-input');
 const replaceInput = document.getElementById('replace-input');
 const stripInput   = document.getElementById('strip-input');
 const splitInput   = document.getElementById('split-input');
+const upperInput   = document.getElementById('upper-input');
 const hasFS        = 'showOpenFilePicker' in window;
 
 function findOpen() { return !findPanel.classList.contains('hidden'); }
@@ -590,6 +591,44 @@ function splitLines() {
   setStatus(`Split at ${count} point${count !== 1 ? 's' : ''} → ${view.state.doc.lines} lines`);
 }
 
+// ── SORT LINES A–Z / Z–A ──  (case-insensitive, natural number order)
+function sortLines(dir) {
+  const before = getText();
+  const lines = before.split('\n');
+  if (lines.length < 2) { setStatus('Nothing to sort'); return; }
+  const cmp = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  const sorted = lines.slice().sort(dir === 'desc' ? (a, b) => cmp(b, a) : cmp);
+  const result = sorted.join('\n');
+  if (result === before) { setStatus('Already in order'); return; }
+  setDoc(result);
+  currentMatchIdx = -1;
+  setStatus(`Sorted ${lines.length} lines ${dir === 'desc' ? 'Z → A' : 'A → Z'}`);
+}
+
+// ── UPPERCASE AFTER DELIMITER ──
+// On each line, uppercase everything after the FIRST delimiter; the delimiter and
+// the text before it stay as-is. Lines without the delimiter are left untouched.
+function uppercaseAfter() {
+  const delim = upperInput.value;
+  if (delim === '') { setStatus('Enter a delimiter to uppercase after'); return; }
+  const before = getText();
+  let changed = 0;
+  const out = before.split('\n').map(line => {
+    const idx = line.indexOf(delim);
+    if (idx === -1) return line;
+    const head = line.slice(0, idx + delim.length);
+    const tail = line.slice(idx + delim.length);
+    const upper = tail.toUpperCase();
+    if (upper !== tail) changed++;
+    return head + upper;
+  });
+  const result = out.join('\n');
+  if (result === before) { setStatus('Nothing to change (delimiter missing or already uppercase)'); return; }
+  setDoc(result);
+  currentMatchIdx = -1;
+  setStatus(`Uppercased after delimiter on ${changed} line${changed !== 1 ? 's' : ''}`);
+}
+
 // ── DUPLICATE LINES ──
 function normLine(s) {
   let t = dupeTrim ? s.trim() : s;
@@ -684,17 +723,44 @@ function renderDupePanel(data) {
     group.appendChild(head);
     const chips = document.createElement('div');
     chips.className = 'dupe-chips';
-    g.indices.forEach((li, k) => {
+    g.indices.forEach((li) => {
+      const keep = dupeKeepSet.has(li);
       const chip = document.createElement('button');
-      chip.className = 'dupe-chip' + (k === 0 ? ' keep' : '');
-      chip.textContent = 'L' + (li + 1) + (k === 0 ? ' · keep' : '');
-      chip.addEventListener('click', () => jumpToLine(li));
+      chip.className = 'dupe-chip' + (keep ? ' keep' : '');
+      chip.dataset.line = li;
+      chip.textContent = 'L' + (li + 1) + (keep ? ' · keep' : '');
+      chip.title = keep
+        ? 'Kept — this line stays. Tap another line to keep that one instead.'
+        : 'Tap to keep this line instead (and jump to it)';
+      chip.addEventListener('click', () => selectKeep(gi, li, chips));
       chips.appendChild(chip);
     });
     group.appendChild(chips);
     frag.appendChild(group);
   });
   body.appendChild(frag);
+}
+// Pick which occurrence in a group to KEEP. Each group keeps exactly one line;
+// tapping a chip moves the "keep" to that line (and jumps to it). "Remove All"
+// and per-group remove then drop every occurrence that ISN'T the kept one.
+function selectKeep(gi, li, chipsEl) {
+  const g = lastDupeGroups[gi];
+  if (!g) return;
+  for (const idx of g.indices) dupeKeepSet.delete(idx);
+  dupeKeepSet.add(li);
+  if (chipsEl) {
+    for (const chip of chipsEl.children) {
+      const cl = Number(chip.dataset.line);
+      const keep = cl === li;
+      chip.classList.toggle('keep', keep);
+      chip.textContent = 'L' + (cl + 1) + (keep ? ' · keep' : '');
+      chip.title = keep
+        ? 'Kept — this line stays. Tap another line to keep that one instead.'
+        : 'Tap to keep this line instead (and jump to it)';
+    }
+  }
+  applyDupeDeco();
+  jumpToLine(li);
 }
 // Move the caret to line `li` (0-based) and scroll it into view; CM's active-line
 // highlight + the dupe tint make it visible without a native selection callout.
@@ -713,16 +779,23 @@ function dupeStep(dir) {
   setStatus(`Duplicate ${dupeNavIdx + 1}/${dupeNavList.length}`);
 }
 function removeAllDupes() {
-  const data = computeDuplicates();
-  if (!data.groups.length) { setStatus('No duplicate lines'); return; }
+  if (!lastDupeGroups.length) { setStatus('No duplicate lines'); return; }
   const remove = new Set();
-  for (const g of data.groups) for (let i = 1; i < g.indices.length; i++) remove.add(g.indices[i]);
+  for (const g of lastDupeGroups) {
+    // Keep the chosen occurrence (falls back to the first if none is selected).
+    const chosen = g.indices.find(li => dupeKeepSet.has(li));
+    const keeper = chosen === undefined ? g.indices[0] : chosen;
+    for (const li of g.indices) if (li !== keeper) remove.add(li);
+  }
+  if (!remove.size) { setStatus('Nothing to remove'); return; }
   applyLineRemoval(remove);
 }
 function removeGroupDupes(gi) {
   const g = lastDupeGroups[gi];
   if (!g) return;
-  applyLineRemoval(new Set(g.indices.slice(1)));
+  const chosen = g.indices.find(li => dupeKeepSet.has(li));
+  const keeper = chosen === undefined ? g.indices[0] : chosen;
+  applyLineRemoval(new Set(g.indices.filter(li => li !== keeper)));
 }
 function applyLineRemoval(removeSet) {
   if (!removeSet.size) return;
@@ -805,6 +878,10 @@ splitInput.addEventListener('input', () => autoGrow(splitInput));
 splitInput.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); closeFind(); } });
 stripInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); stripFrom(); }
+  else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+});
+upperInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); uppercaseAfter(); }
   else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
 });
 
