@@ -115,6 +115,16 @@
           <textarea id="split-input" class="find-field split-field find-area" rows="1" placeholder=", or ; — Return = new line" spellcheck="false" autocomplete="off"></textarea>
           <button class="find-act" onclick="splitLines()">Split</button>
         </div>
+        <div class="find-row find-row-area find-sort">
+          <span class="strip-label" title="Reorder every line alphabetically (case-insensitive, natural number order)">Sort lines</span>
+          <button class="find-act" onclick="sortLines('asc')" title="Sort all lines alphabetically A → Z">A → Z</button>
+          <button class="find-act" onclick="sortLines('desc')" title="Sort all lines alphabetically Z → A">Z → A</button>
+        </div>
+        <div class="find-row find-row-area find-upper">
+          <span class="strip-label" title="On each line, UPPERCASE everything after the first delimiter. The delimiter and the text before it are left untouched (e.g. handy for forcing hex values to caps).">Uppercase after</span>
+          <input id="upper-input" class="find-field strip-field" type="text" placeholder=": or =" spellcheck="false" autocomplete="off">
+          <button class="find-act" onclick="uppercaseAfter()" title="Uppercase everything past the first delimiter on each line">Uppercase</button>
+        </div>
       </div>
 
       <!-- CodeMirror mounts here -->
@@ -130,7 +140,7 @@
         <button class="dupe-nav" onclick="dupeStep(1)" title="Next duplicate (F3)">▼</button>
         <button id="dupe-case" class="dupe-opt" onclick="toggleDupeOpt('case')" title="Match case">Aa</button>
         <button id="dupe-trim" class="dupe-opt active" onclick="toggleDupeOpt('trim')" title="Ignore leading/trailing whitespace">Trim</button>
-        <button class="dupe-act" onclick="removeAllDupes()" title="Keep first of each, remove the rest">Remove All</button>
+        <button class="dupe-act" onclick="removeAllDupes()" title="Keep the selected line in each group (tap a chip to choose), remove the other duplicates">Remove All</button>
         <button id="dupe-expand" class="dupe-nav" onclick="toggleDupeExpand()" title="Expand panel to full size">⤢</button>
         <button class="dupe-close" onclick="closeDupes()" title="Close (Esc)">✕</button>
       </div>
