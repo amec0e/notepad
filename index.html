@@ -115,6 +115,12 @@
           <textarea id="split-input" class="find-field split-field find-area" rows="1" placeholder=", or ; — Return = new line" spellcheck="false" autocomplete="off"></textarea>
           <button class="find-act" onclick="splitLines()">Split</button>
         </div>
+        <div class="find-row find-row-area find-join">
+          <span class="strip-label" title="The inverse of Split: collapses every line into one. Field 1 = the separator placed between lines. Field 2 (optional) = wraps each line on both sides first — e.g. wrap with &quot; and separate with , to get &quot;a&quot;,&quot;b&quot;,&quot;c&quot;. A single trailing blank line is ignored.">Join lines with</span>
+          <input id="join-sep-input" class="find-field strip-field" type="text" placeholder="join:  ,  ;  |" spellcheck="false" autocomplete="off">
+          <input id="join-wrap-input" class="find-field strip-field" type="text" placeholder="wrap each:  &quot;  '" spellcheck="false" autocomplete="off">
+          <button class="find-act" onclick="joinLines()" title="Collapse every line into one line — wrapping each line, then separating them">Join</button>
+        </div>
         <div class="find-row find-row-area find-sort">
           <span class="strip-label" title="Reorder every line alphabetically (case-insensitive, natural number order)">Sort lines</span>
           <button class="find-act" onclick="sortLines('asc')" title="Sort all lines alphabetically A → Z">A → Z</button>
