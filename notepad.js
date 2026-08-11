@@ -59,6 +59,8 @@ const findInput    = document.getElementById('find-input');
 const replaceInput = document.getElementById('replace-input');
 const stripInput   = document.getElementById('strip-input');
 const splitInput   = document.getElementById('split-input');
+const joinSepInput  = document.getElementById('join-sep-input');
+const joinWrapInput = document.getElementById('join-wrap-input');
 const upperInput   = document.getElementById('upper-input');
 const hasFS        = 'showOpenFilePicker' in window;
 
@@ -591,6 +593,26 @@ function splitLines() {
   setStatus(`Split at ${count} point${count !== 1 ? 's' : ''} → ${view.state.doc.lines} lines`);
 }
 
+// ── JOIN LINES WITH ──  (inverse of Split)
+// Collapses every line into one line. `sep` goes between lines; `wrap` (optional)
+// wraps each line on both sides first, so wrap=" sep=, turns a/b/c into "a","b","c".
+// A single trailing blank line (the end-of-file newline) is ignored so you don't
+// get an empty wrapped item at the end.
+function joinLines() {
+  const sep  = joinSepInput.value;
+  const wrap = joinWrapInput.value;
+  if (sep === '' && wrap === '') { setStatus('Enter a separator (and optionally a wrap) to join lines with'); return; }
+  const before = getText();
+  const lines = before.split('\n');
+  if (lines.length && lines[lines.length - 1] === '') lines.pop();   // drop trailing EOF-newline blank
+  if (lines.length < 2 && wrap === '') { setStatus('Need at least two lines to join'); return; }
+  const joined = lines.map(l => wrap + l + wrap).join(sep);
+  if (joined === before) { setStatus('Nothing changed'); return; }
+  setDoc(joined);
+  currentMatchIdx = -1;
+  setStatus(`Joined ${lines.length} line${lines.length !== 1 ? 's' : ''} → 1 line`);
+}
+
 // ── SORT LINES A–Z / Z–A ──  (case-insensitive, natural number order)
 function sortLines(dir) {
   const before = getText();
@@ -876,6 +898,14 @@ replaceInput.addEventListener('input', () => autoGrow(replaceInput));
 replaceInput.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); closeFind(); } });
 splitInput.addEventListener('input', () => autoGrow(splitInput));
 splitInput.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); closeFind(); } });
+joinSepInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); joinLines(); }
+  else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+});
+joinWrapInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); joinLines(); }
+  else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+});
 stripInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); stripFrom(); }
   else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
